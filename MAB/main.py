@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from prb2_funcs import Bandit
+from funcs import Bandit
 
 def main():
     bandits = Bandit(10)
