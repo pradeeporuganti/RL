@@ -1,27 +1,35 @@
-class Block:
+def typed_property(name, expected_type):
+    storage_name = '_' + name
+    
+    @property
+    def prop(self):
+        return getattr(self, storage_name)
+    
+    @prop.setter
+    def prop(self, value):
+        if not isinstance(value, expected_type):
+            raise TypeError('{} must be a {}'.format(name, expected_type))
+        setattr(self, storage_name, value)
+        return prop
 
-    def __init__(self, loc, type = None, value = 0) -> None:
+class Block:   
+    loc = typed_property('loc', (float, float))
+    type = typed_property('type', str)
+    value = typed_property('value', float)
+
+    def __init__(self, loc = None, type = None, value = 0) -> None:
         self.loc = loc
         self.type = type
         self.value = value
 
-    def setType(self, a):
-        self.type = a
-
-    def setValue(self, b):
-        self.value = b
-
-    def getLoc(self):
-        return self.loc
-
-    def getType(self):
-        return self.type
-
-    def getValue(self):
-        return self.value
-
 class Grid(Block):
-    
+    width = typed_property('width', int)
+    height = typed_property('height', int)
+    blocked = typed_property('blocked', (float, float))
+    trap = typed_property('trap', (float, float))
+    goal = typed_property('goal', (float, float))
+    start = typed_property('start', (float, float))
+
     def __init__(self) -> None:
         self.width = 4
         self.height = 3
@@ -38,23 +46,16 @@ class Grid(Block):
                 self.grid.append(Block((i,j)))
 
         for block in self.grid:  
-            if block.getLoc() == self.blocked:
-                block.setType('blocked')
-            elif block.getLoc() == self.trap:
-                block.setType('trap')
-            elif block.getLoc() == self.goal:
-                block.setType('goal')
-            elif block.getLoc() == self.start:
-                block.setType('start')
+            if block.loc == self.blocked:
+                block.type = 'blocked'
+            elif block.loc == self.trap:
+                block.type = 'trap'
+            elif block.loc == self.goal:
+                block.type = 'goal'
+            elif block.loc == self.start:
+                block.type = 'start'
             else:
-                block.setType('free')
+                block.type = 'free'
 
         return self.grid
-
-def main():
-    g = Grid()
-    grid = g.createGrid()
-
-if __name__ == '__main__':
-    main()
 
