@@ -42,7 +42,8 @@ class Grid(Block):
     def createGrid(self):
         
         for i in range(0, self.height):
-            for j in range(0, self.width):
+            #for j in range(self.width-1, -1, -1):      # start from goal
+            for j in range(0, self.width):              # start from other place
                 self.grid.append(Block((i,j)))
 
         for block in self.grid:  
