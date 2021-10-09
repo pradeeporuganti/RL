@@ -1,67 +1,117 @@
 import matplotlib.pyplot as plt
-import numpy as np
+import random
+import time; from statistics import mean
+import os
 
-class State():
-    def __init__(self, amt_in_hand, value=0) -> None:
-        self.amt_in_hand = amt_in_hand
-        self.value = value
-
-def sys_dyn(s, a, event):
-    
-    if s.id == 100:
-        _r = 1
-        _s_next = -1
-    elif s.id != 100 and event == 'win':
-        _s_next = min(s.id + a, 100)
-        _r = 0
-    elif s.id != 100 and event == 'lose':
-        _s_next = max(0, s.id - a)
-        _r = 0
-    
-    return _r, _s_next
-
-def optimbellman(s, A, states, p_h):
-    
-    Q = []
+def optimbellman(s, V, p_h):
+    Q = []; A = [_ for _ in range(0, min(s, 100-s)+1)]
     for a in A:
-        _r_win, _s_next_win = sys_dyn(s, a, 'win')
-        _r_lose, _s_next_lose = sys_dyn(s, a, 'lose')
-        for _ in states:
-            if _.id == _s_next_win:
-                _v_win = _.value
-            elif _.id == _s_next_lose:
-                _v_lose = _.value
-            else:
-                pass
-        Q.append(p_h*(_r_win + _v_win) + (1-p_h)*(_r_lose + _v_lose))
-
-    return Q.index(max(Q)), max(Q)
-
-def value_iter(states, p_h):
+        Q.append(p_h*(V[s+a]) + (1-p_h)*(V[s-a]))
+    return max(Q)
+    
+def value_iter(S, V, p_h):
     _Delta = 1
-    _theta = 0.00001
+    _theta = 1e-8
+    iter = 0
 
-    pi_ = [None]*100
+    # get values
     while _Delta > _theta:
         _Delta = 0
-        for s in states:
-            v = s.value                                # store its current value
-            _max_bet = max(s.id, 100-s.id)             # get the maximum bet availiable in this state
-            A = list(np.arange(_max_bet+1))            # action space at the current state
-            bet, s.value = optimbellman(s, A, states, p_h)
-            pi_[s.id] = bet
-            _Delta = max(v, s.value)
-    return pi_
+        for s in S:
+            v = V[s]                               
+            val = optimbellman(s, V, p_h)        
+            V[s] = val
+            _Delta = max(_Delta, abs(v - val))
+        iter += 1
+    #print(iter)
+
+    # get policy
+    pi_ = [None]*101
+    for s in S:
+        A = [_ for _ in range(0, min(s, 100-s)+1)]; Q = []
+        for a in A:
+            Q.append(p_h*(V[s+a]) + (1-p_h)*(V[s-a]))
+        # handling deminal points and multiple max
+        if Q.index(max(Q)) == 0:
+            bet = [i for i, x in enumerate(Q) if x == max(Q)]
+            pi_[s] = A[max(bet)]
+        else:   pi_[s] = A[Q.index(max(Q))]
+    
+    return pi_, V
+
+def gen_xp(policy, S, p_h):
+    #S0 = random.choice(S[1:-1])     # randomly choose initial capital
+    S0 = 1
+    S_xprnc = [S0]; R = [0]
+
+    while True:
+        a = policy[S_xprnc[-1]]
+        act = random.choices([a, -a], weights=(p_h, 1-p_h), k=1)
+        s_next = S_xprnc[-1] + act[0]
+        S_xprnc.append(s_next)
+        if s_next != 100:
+            R.append(0)
+        else: R.append(1)
+        # terminate episode when reaching $100 or $0 (broke)
+        if s_next  == 0 or s_next == 100:
+            break
+
+    return S_xprnc, R
+
+
+def monte_carlo(policy, S, p_h):
+    
+    Returns = dict.fromkeys(S, [])
+    
+    estim_V = [0]*len(S)
+    iter_ = 0; iter_time = []
+    while iter_ < 151:
+        start_time = time.time()                # start time to gen xp and get values
+        xprnc, rwd = gen_xp(policy, S, p_h)
+        G = 0
+        for index, value in enumerate(reversed(xprnc)):
+            G = G + rwd[len(xprnc) - (index+1)]
+            Returns[value].append(G)
+            estim_V[value] = mean(Returns[value])
+        iter_ += 1
+        end_time = time.time()                  # end time
+        print(iter_, end=" ")
+        print(end_time - start_time, end=" ")
+        print(len(xprnc))
+        iter_time.append(end_time - start_time)
+        if iter_%50 == 0:
+            plt.figure(3)
+            plt.plot(estim_V, label="iteration" + str(iter_))
+            plt.legend()
+            plt.draw()
+            print(estim_V)
+    plt.show()
+
+    return estim_V
 
 def main():
-    p_h = 0.25      # probability of getting heads
+    p_h = 0.55 
 
-    # state-sapce  # state 101 is terminal
-    S = [State()]*101
-    policy = value_iter(S, p_h)
+    S = [_ for _ in range(0, 101)]
+    V = [0]*101; V[-1] = 1
+
+    policy, finalV = value_iter(S, V, p_h)
+    print(policy[51])
+    estim_V = monte_carlo(policy, S, p_h)
     
-    #plt.plot(policy)
-    #plt.show()
+    plt.figure(0)
+    plt.plot(S, finalV, label = "VI")
+    plt.xlabel("Captial")
+    plt.ylabel("Value")
+    plt.draw()
+    
+    plt.figure(1)
+    plt.plot(S, policy)
+    plt.xlabel("Captial"); plt.ylabel("Bet")
+    plt.draw()
+    plt.show()
+
+    #estim_V = monte_carlo(policy, S)
 
 if __name__ == '__main__':
     main()
