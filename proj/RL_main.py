@@ -1,11 +1,7 @@
 from functions import *
-import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import torch.nn.functional as Fu
-
-def env():
-    pass
 
 # class Net(torch.nn.Module):
 
@@ -31,7 +27,7 @@ class NeuralNet(nn.Module):
         self.fc2_dims = fc2_dims
         self.n_actions = n_actions
 
-        self.fc1 = nn.Linear(self.input_dims, self.fc1_dims)
+        self.fc1 = nn.Linear(*self.input_dims, self.fc1_dims)
         self.fc2 = nn.Linear(self.fc1_dims, self.fc2_dims)
         self.fc3 = nn.Linear(self.fc2_dims, self.n_actions)
 
@@ -51,7 +47,7 @@ class NeuralNet(nn.Module):
 class Agent(object):
 
     def __init__(self, alpha, beta, input_dims, gamma=0.99, n_actions=2,
-                 layer1_size=64, layer2_size=64, n_outputs=1):
+                 layer1_size=256, layer2_size=256, n_outputs=1):
         self.gamma = gamma
         self.log_probs = None
         self.n_outputs = n_outputs
@@ -61,12 +57,15 @@ class Agent(object):
                                 layer2_size, n_actions=1)
 
     def choose_action(self, observation):
-        mu, sigma = self.actor.forward(observation)
+        #print(observation)
+        #print(self.actor.forward(observation))
+        mu, sigma = self.actor.forward(observation)[0]
         sigma = torch.exp(sigma)
         action_probs = torch.distributions.Normal(mu, sigma)
         probs = action_probs.sample(sample_shape=torch.Size([self.n_outputs]))
         self.log_probs = action_probs.log_prob(probs).to(self.actor.device)
-        action = 0.4*torch.tanh(probs)
+        action = 1.5*torch.tanh(probs)
+
 
         return action.item()
 
@@ -84,68 +83,51 @@ class Agent(object):
         critic_loss = delta**2
 
         (actor_loss + critic_loss).backward()
+
         self.actor.optimizer.step()
         self.critic.optimizer.step()
 
-def plots(x, text):
-    # Trajectory
-    plt.figure(1)
-    plt.plot(x[:, 5], x[:, 4], text)
-    plt.show()
-
-
-def train(u_cl, xx):
+#def train(u_cl, xx):
     # get data
-    X = torch.from_numpy(xx.astype(np.float32))
-    y = torch.from_numpy(u_cl.astype(np.float32))
+    #X = torch.from_numpy(xx.astype(np.float32))
+    #y = torch.from_numpy(u_cl.astype(np.float32))
 
-    n_samples, n_features = X.shape
-    _, n_out = y.shape
+    #n_samples, n_features = X.shape
+    #_, n_out = y.shape
 
-    input_size = n_features
-    output_size = n_out
+    #input_size = n_features
+    #output_size = n_out
 
-    nn_cont = Net(input_size, output_size)
+    #nn_cont = Net(input_size, output_size)
 
     # Loss criterion
-    criterion = nn.MSELoss()
-    learning_rate = 0.01
-    optimizer = torch.optim.Adam(nn_cont.parameters(), lr=learning_rate)
+    #criterion = nn.MSELoss()
+    #learning_rate = 0.01
+    #optimizer = torch.optim.Adam(nn_cont.parameters(), lr=learning_rate)
 
-    num_epochs = 1000
-    for epoch in range(num_epochs):
+    #num_epochs = 1000
+    #for epoch in range(num_epochs):
         # Forward pass and loss
-        y_predicted = nn_cont(X)
-        loss = criterion(y_predicted, y)
+        #y_predicted = nn_cont(X)
+        #loss = criterion(y_predicted, y)
 
         # Backward pass and update
-        loss.backward()
-        optimizer.step()
+        #loss.backward()
+        #optimizer.step()
 
         # zero grad before new step
-        optimizer.zero_grad()
+        #optimizer.zero_grad()
 
-        if (epoch + 1) % 10 == 0:
-            print(f'epoch: {epoch + 1}, loss = {loss.item():.4f}')
+        #if (epoch + 1) % 10 == 0:
+        #    print(f'epoch: {epoch + 1}, loss = {loss.item():.4f}')
 
-    with torch.no_grad():
-        nn_xx = np.array([20, 0, 0, 0, 0, 0], dtype=np.float32)
-        nn_xx = np.reshape(nn_xx, (1, 6))
+    #with torch.no_grad():
+        #nn_xx = np.array([20, 0, 0, 0, 0, 0], dtype=np.float32)
+        #nn_xx = np.reshape(nn_xx, (1, 6))
 
-        for i in range(45):
-            nn_u_apply = nn_cont(torch.from_numpy(nn_xx[i, :]))
-            nn_xx_next = np.array(step(nn_xx[i, :], nn_u_apply.detach().numpy()), dtype=np.float32)
-            nn_xx = np.concatenate((nn_xx, np.reshape(nn_xx_next, (1, 6))), axis=0)
+        #for i in range(45):
+            #nn_u_apply = nn_cont(torch.from_numpy(nn_xx[i, :]))
+            #nn_xx_next = np.array(step(nn_xx[i, :], nn_u_apply.detach().numpy()), dtype=np.float32)
+            #nn_xx = np.concatenate((nn_xx, np.reshape(nn_xx_next, (1, 6))), axis=0)
 
-    plots(nn_xx, 'r-')
-
-
-def main():
-    # an optimal policy
-    u_cl, xx = read_files()
-
-    train(u_cl, xx)
-
-
-if __name__ == '__main__':
-    main()
+    #plots(nn_xx, 'r-')
